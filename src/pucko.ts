@@ -155,6 +155,27 @@ export class Pucko {
 		});
 	}
 
+	delete(uuid) {
+		console.log("delete: ",uuid);
+		return new Promise((resolve,reject) => {
+			let id = this.id++;
+			this.actions[id] = (obj) => {
+				if(obj['response'] == 'ok') {
+					resolve(obj['uuid']);
+				} else {
+					reject(obj['message']);
+				}
+			};
+			this.webSocket.send(JSON.stringify({ id, type: "delete", uuid }));
+			// Timeout
+			setTimeout((args) => {
+				delete this.actions[id];
+				reject("delete Timeout");
+				// Disconnect???
+			},this.timeout);
+		});
+	}
+
 	update(uuid,set={},del:string[]=[]) {
 		console.log("update: ",set)
 		return new Promise((resolve,reject) => {
@@ -176,12 +197,12 @@ export class Pucko {
 		});
 	}
 
-	removeKeys(uuid,...keys:string[]) {
+	deleteKey(uuid,...keys:string[]) {
 		return this.update(uuid,{},keys);
 	}
 
-	updateKey(uuid,key:string,value) {
-		return this.update(uuid,{ key : value});
+	setKey(uuid,key:string,value) {
+		return this.update(uuid,{ [key] : value});
 	}
 
 }

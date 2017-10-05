@@ -20,15 +20,17 @@ $(document).ready(function () {
     //var pucko = new Pucko.Pucko('ws://192.168.2.2:9999/');
     var pucko = new Pucko.Pucko('ws://127.0.0.1:9999/');
     pucko.onObj((o) => {
-        console.log("Object: " + o);        
+        console.log("Object: " + o);
         Object.keys(o).filter(k => k != 'type').forEach((v) => {
             $("#" + v).remove();
-            $("#pucko").append(                
-                '<div id="' + v + '">' +
-                "<h2>" + v + "</h2>" + 
-                "<h3>" + JSON.stringify(o[v]) + "</h3>" +
-                "</div>"
-            );
+            if(o[v]['.deleted'] === undefined || !o[v]['.deleted']) {
+                $("#pucko").append(                
+                    '<div id="' + v + '">' +
+                    "<h2>" + v + "</h2>" + 
+                    "<h3>" + JSON.stringify(o[v]) + "</h3>" +
+                    "</div>"
+                );
+            }
         });
     })
     pucko.connect().then((x) => { 
@@ -40,20 +42,29 @@ $(document).ready(function () {
             console.log("Error: " + x);
     });
 
-    $("#addFoo").click(function(n) {
-        pucko.create({ 'foo' : $("#textFoo").val() }).then((n) => {
-            $("#textFoo").val("");
+    $("#createEdit").click(function(n) {
+        pucko.create({}).then((uuid) => {
+            console.log("created: " + uuid);
         }).catch((n) => {
             console.log("Failed: " + n);
         });
     });
-
-    $("#updateEdit").click(function(n) {
-        let h = {};
-        let k = $("#keyEdit").val();        
-        h[k] = $("#textEdit").val();
-        pucko.update($("#uuidEdit").val(),h).then((n) => {
-            $("#textEdit").val("");
+    $("#setKey").click(function(n) {
+        pucko.setKey($("#uuidEdit").val(),$("#pKey").val(),$("#pValue").val()).then((n) => {
+        }).catch((n) => {
+            console.log("Failed: " + n);
+        });
+    });
+    $("#deleteKey").click(function(n) {
+        pucko.deleteKey($("#uuidEdit").val(),$("#pKey").val()).then((n) => {
+        }).catch((n) => {
+            console.log("Failed: " + n);
+        });
+    });
+    // Delete Object
+    $("#deleteEdit").click(function(n) {
+        pucko.delete($("#uuidEdit").val()).then((uuid) => {
+            console.log("Deleted:" + uuid);
         }).catch((n) => {
             console.log("Failed: " + n);
         });
@@ -66,12 +77,16 @@ $(document).ready(function () {
 	<br/>
     <div id="pucko"></div>
     <div>
-        <input type="text" id="textFoo"><button id="addFoo">add</button>
+            <button id="createEdit">create</button>
+    </div>    
+    <div>UUID:<input type="text" id="uuidEdit"></div>
+    <div>
+        <input type="text" id="pKey">=<input type="text" id="pValue"><button id="setKey">set</button><button id="deleteKey">delete</button>
     </div>
     <div>
-        UUID:<input type="text" id="uuidEdit"><br>
-        <input type="text" id="keyEdit">=<input type="text" id="textEdit"><button id="updateEdit">update</button>
+        <button id="deleteEdit">delete</button>
     </div>
+    
 </div>
 </body>
 </html>
