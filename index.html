@@ -13,30 +13,65 @@
             background: #144766
         }
     </style>
-    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="js/jquery-1.10.2.js"></script>
     <script src="pucko.js"></script>
     <script>
-$(document).ready(function () {
-    var pucko = new Pucko.Pucko('ws://192.168.2.2:9999/');
+$(document).ready(function () {    
+    //var pucko = new Pucko.Pucko('ws://192.168.2.2:9999/');
+    var pucko = new Pucko.Pucko('ws://127.0.0.1:9999/');
     pucko.onObj((o) => {
-        console.log("Object: " + o);
+        console.log("Object: " + o);        
+        Object.keys(o).filter(k => k != 'type').forEach((v) => {
+            $("#" + v).remove();
+            $("#pucko").append(                
+                '<div id="' + v + '">' +
+                "<h2>" + v + "</h2>" + 
+                "<h3>" + JSON.stringify(o[v]) + "</h3>" +
+                "</div>"
+            );
+        });
     })
     pucko.connect().then((x) => { 
-        pucko.auth("Hej","correct").then((x) => {
-            console.log("Login OK: " + x);
-            pucko.replay(0);
-        }).catch((x) => {
+        return pucko.auth("magnus","correct");
+    }).then((x) => {
+        console.log("Login OK: " + x);            
+        return pucko.replay(0);            
+    }).catch((x) => {
             console.log("Error: " + x);
-        })
     });
-    
+
+    $("#addFoo").click(function(n) {
+        pucko.create({ 'foo' : $("#textFoo").val() }).then((n) => {
+            $("#textFoo").val("");
+        }).catch((n) => {
+            console.log("Failed: " + n);
+        });
+    });
+
+    $("#updateEdit").click(function(n) {
+        let h = {};
+        let k = $("#keyEdit").val();        
+        h[k] = $("#textEdit").val();
+        pucko.update($("#uuidEdit").val(),h).then((n) => {
+            $("#textEdit").val("");
+        }).catch((n) => {
+            console.log("Failed: " + n);
+        });
+    });
 });
     </script>
 </head>
 <body>
 <div id="wrapper">
 	<br/>
-	<div id="pucko"></div>
+    <div id="pucko"></div>
+    <div>
+        <input type="text" id="textFoo"><button id="addFoo">add</button>
+    </div>
+    <div>
+        UUID:<input type="text" id="uuidEdit"><br>
+        <input type="text" id="keyEdit">=<input type="text" id="textEdit"><button id="updateEdit">update</button>
+    </div>
 </div>
 </body>
 </html>

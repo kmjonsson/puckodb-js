@@ -1,33 +1,4 @@
 
-import $ = require("jquery");
-
-/*
-
-var puckodb = {
-    "connect": function(ws) {
-        //webSocket = new WebSocket('ws://127.0.0.1:9999/');
-        this.webSocket = new WebSocket('ws://192.168.2.2:9999/');
-
-        this.webSocket.onerror = function(event) {
-        }.bind(this);
-
-        this.webSocket.onclose = function(event) {        
-            setTimeout(function() {
-                logit("Reconnecting");
-                connect();
-            },5000);
-        }.bind(this);
-
-        this.webSocket.onopen = function(event) {
-        }.bind(this);
-
-        this.webSocket.onmessage = function(message) {
-            if(message.data instanceof Blob) { return; }
-        }.bind(this);
-    }
-};
-
-*/
 
 export class Pucko {
 	private webSocket:WebSocket;
@@ -53,50 +24,72 @@ export class Pucko {
 				reject("Failed?");
 				return;
 			}
-			// Response
+
+			// Response (connected is always id=0)
 			this.actions[0] = (data) => {
 				console.log(data);
-				resolve("Connected :-) action");
+				resolve("Connected :-)");
 			}
+
 			// Timeout
 			setTimeout((e) => {
 				reject("Timeout");
-			},5000);
+			},this.timeout);
 
 			this.webSocket.onerror = (event) => {
-				this.disconnect();
 				console.log("Connection error :-(");
+				this.disconnect();				
+				if(this.actions['onError'] !== undefined) {
+					this.actions['onError'](event);
+				}
 			};
 
 			this.webSocket.onclose = (event) => {
-				if(this.reconnect > 0) {
-					setTimeout(function() {
-						this.connect();
-					},this.reconnect);
-				}
 				console.log("Connection closed :-(");
+				if(this.actions['onClose'] !== undefined) {
+					this.actions['onClose'](event);
+				}
 			};
 			
 			this.webSocket.onopen = (event) => {
 				console.log("Connected :-)");
-				// Do nothing?
+				if(this.actions['onOpen'] !== undefined) {
+					this.actions['onOpen'](event);
+				}				
 			};
 			
 			this.webSocket.onmessage = (message) => {
 				if(message.data instanceof Blob) { return; }
-				console.log(message.data);
+				console.log("on: ",message.data);
 				let data = JSON.parse(message.data)
 				console.log(data.id,this.actions[data.id]);
 				if(data.id !== undefined && this.actions[data.id]) {
 					this.actions[data.id](data);
 					delete this.actions[data.id];
+					return;
+				}
+				if(this.actions['onObj'] !== undefined) {
+					this.actions['onObj'](data);
 				}
 			};
 		});
 	}
 
+	on(action:string, fn: ((any) => void)) {
+		this.actions[action] = fn;
+		return this;
+	}
+
 	onObj(fn: ((any) => void)) {
-		this.actions['onObj'] = fn;
+		return this.on('onObj',fn);
+	}
+
+	onError(fn: ((any) => void)) {
+		return this.on('onError',fn);
+	}
+
+	onClose(fn: ((any) => void)) {
+		return this.on('onClose',fn);
 	}
 
 	auth(user:string, password:string) {
@@ -139,6 +132,56 @@ export class Pucko {
 				// Disconnect???
 			},this.timeout);
 		});
+	}
+
+	create(data) {
+		console.log("create: ",data)
+		return new Promise((resolve,reject) => {
+			let id = this.id++;
+			this.actions[id] = (obj) => {
+				if(obj['response'] == 'ok') {
+					resolve(obj['uuid']);
+				} else {
+					reject(obj['message']);
+				}
+			};
+			this.webSocket.send(JSON.stringify({ id, type: "create", 'set':data }));
+			// Timeout
+			setTimeout((args) => {
+				delete this.actions[id];
+				reject("create Timeout");
+				// Disconnect???
+			},this.timeout);
+		});
+	}
+
+	update(uuid,set={},del:string[]=[]) {
+		console.log("update: ",set)
+		return new Promise((resolve,reject) => {
+			let id = this.id++;
+			this.actions[id] = (obj) => {
+				if(obj['response'] == 'ok') {
+					resolve(obj['uuid']);
+				} else {
+					reject(obj['message']);
+				}
+			};
+			this.webSocket.send(JSON.stringify({ id, type: "update", uuid, set, 'delete':del}));
+			// Timeout
+			setTimeout((args) => {
+				delete this.actions[id];
+				reject("update Timeout");
+				// Disconnect???
+			},this.timeout);
+		});
+	}
+
+	removeKeys(uuid,...keys:string[]) {
+		return this.update(uuid,{},keys);
+	}
+
+	updateKey(uuid,key:string,value) {
+		return this.update(uuid,{ key : value});
 	}
 
 }
