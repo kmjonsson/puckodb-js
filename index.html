@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<html>
+<head>
+<meta http-equiv='cache-control' content='no-cache'>
+<meta http-equiv='expires' content='0'>
+<meta http-equiv='pragma' content='no-cache'>
+    <meta charset="UTF-8">
+    <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' /> 
+    <title>PuckoDB</title>
+    <style>
+        body{
+            background: #144766
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="pucko.js"></script>
+    <script>
+$(document).ready(function () {
+    var pucko = new Pucko.Pucko('ws://192.168.2.2:9999/');
+    pucko.onObj((o) => {
+        console.log("Object: " + o);
+    })
+    pucko.connect().then((x) => { 
+        pucko.auth("Hej","correct").then((x) => {
+            console.log("Login OK: " + x);
+            pucko.replay(0);
+        }).catch((x) => {
+            console.log("Error: " + x);
+        })
+    });
+    
+});
+    </script>
+</head>
+<body>
+<div id="wrapper">
+	<br/>
+	<div id="pucko"></div>
+</div>
+</body>
+</html>
